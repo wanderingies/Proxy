@@ -11,11 +11,7 @@ namespace Proxy
         PackServer LinkServer;
         PackServer GameServer;
 
-        private int currentId;
         private int currentGame = 0;
-        /// <summary>
-        /// Dictionary<客户端ID,服务端ID>
-        /// </summary>
         private Dictionary<int, int> Ids = null;
 
         public ProxyServer(int _mun, int _rebuf, int _overtime, uint _flag)
@@ -27,42 +23,28 @@ namespace Proxy
             GameServer.OnReceive += this.OnReceive;
         }
 
-        #region GameServer
-        public void GameStart(int port)
+        #region Game
+
+        public void Start(int port)
         {
             GameServer.Start(port);
         }        
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="id">服务端ID</param>
         private void OnAccept(int id)
         {
             if (currentGame == 0)
             {
                 currentGame = id;
-                currentId = 1;
-                this.LinkStart();
+                this.Link();
                 Console.WriteLine(string.Format("[{0}] 服务端已连接！ 序号({1})", DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"), id));
             }
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="id">客户端ID</param>
-        /// <param name="buffer"></param>
         private void Send(int id, byte[] buffer)
         {
             GameServer.Send(id, buffer, 0, buffer.Length);
         }
 
-        /// <summary>
-        /// 客户端ID
-        /// </summary>
-        /// <param name="id"></param>
-        /// <param name="buffer"></param>
         private void OnReceive(int id, byte[] buffer)
         {
             if (buffer[0] == 0x67)
@@ -78,16 +60,11 @@ namespace Proxy
             }
         }
 
-        private void OnClose(int id)
-        {
-            Console.WriteLine(string.Format("[{0}] 服务端已断开连接！ 序号({1})", DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"), id));
-        }
-
         #endregion
 
-        #region LinkServer
+        #region Link
 
-        private void LinkStart()
+        private void Link()
         {
             LinkServer = new PackServer(2000, 65536, 10, 0);
             LinkServer.OnAccept += this.LinkAccept;
@@ -96,13 +73,8 @@ namespace Proxy
             LinkServer.Start(29000);
         }
 
-        /// <summary>
-        /// 客户端ID
-        /// </summary>
-        /// <param name="id"></param>
         private void LinkAccept(int id)
         {
-            id = currentId;
             if (!Ids.ContainsKey(id) && this.currentGame != 0)
             {
                 Ids.Add(id, currentGame);
@@ -119,14 +91,9 @@ namespace Proxy
                 Console.WriteLine(string.Format("[{0}] 客户端已连接！ 序号({1})", DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"), id));
             }
         }
-        /// <summary>
-        /// 客户端ID
-        /// </summary>
-        /// <param name="id"></param>
-        /// <param name="buffer"></param>
+
         private void LinkReceive(int id, byte[] buffer)
         {
-            id = currentId;
             using (PacketStream packetStream = new PacketStream(buffer))
             {
                 packetStream.Insert(0, (byte)0x67);
@@ -137,10 +104,6 @@ namespace Proxy
             }
         }
 
-        private void LinkClose(int id)
-        {
-            Console.WriteLine(string.Format("[{0}] 客户端已断开连接！ 序号({1})", DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"), id));
-        }
         #endregion
 
     }
